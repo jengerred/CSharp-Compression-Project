@@ -97,23 +97,20 @@ namespace CompressionProject
                 // 3. Compress file
                 CompressFile(inputFile, compressedFile, codeTable);
 
-                // 4. Show actual compressed output (hex preview)
+   
+                // 4. Show actual compressed output (full hex output)
                 using (FileStream fs = File.OpenRead(compressedFile))
                 {
-                    byte[] preview = new byte[16];
-                    int bytesRead = fs.Read(preview, 0, preview.Length);
-                    string hex = BitConverter.ToString(preview, 0, bytesRead).Replace("-", " ");
-                    CompressionResultsListBox.Items.Add(hex + (fs.Length > 16 ? " ..." : ""));
+                    byte[] allBytes = new byte[fs.Length];
+                    int bytesRead = fs.Read(allBytes, 0, allBytes.Length);
+                    string hex = BitConverter.ToString(allBytes, 0, bytesRead).Replace("-", " ");
+                    CompressionResultsListBox.Items.Add(hex);
                 }
 
                 // 5. Show compression stats
                 long originalSize = new FileInfo(inputFile).Length;
                 long compressedSize = new FileInfo(compressedFile).Length;
-                CompressionResultsListBox.Items.Add("-------------------------------------");
-                CompressionResultsListBox.Items.Add($"\nOriginal Size: {originalSize} bytes");
-                CompressionResultsListBox.Items.Add($"Compressed Size: {compressedSize} bytes");
-                CompressionResultsListBox.Items.Add($"Compression Ratio: {(originalSize == 0 ? 0 : (double)compressedSize / originalSize):P2}");
-                CompressionResultsListBox.Items.Add($"Compressed file: {compressedFile}");
+
 
                 // 6. Show frequency table on the right
                 for (int ascii = 0; ascii < 256; ascii++)
@@ -128,8 +125,7 @@ namespace CompressionProject
                     }
                 }
 
-                MessageBox.Show($"File compressed and saved as {compressedFile} in the project folder.");
-
+            
                 lastTree = tree; // Save the tree for decompression
 
 
@@ -230,11 +226,10 @@ namespace CompressionProject
                 steps.Add(() =>
                 {
                     BehindTheScenesTextBlock.Text = narrationList[4];
-                    FrequencyResultsListBox.Visibility = Visibility.Collapsed;
-                    TreeAnimationCanvas.Visibility = Visibility.Visible;
-
-                    var hexOutputAnim = new ShowCompressedHexOutput(TreeAnimationCanvas);
-                    hexOutputAnim.Display(compressedFile);
+                    FrequencyResultsListBox.Visibility = Visibility.Visible;
+                    TreeAnimationCanvas.Visibility = Visibility.Collapsed;
+                    var compressedHexOutput = new ShowCompressedHexOutput(FrequencyResultsListBox);
+                    compressedHexOutput.Display(compressedFile);
                 });
 
 

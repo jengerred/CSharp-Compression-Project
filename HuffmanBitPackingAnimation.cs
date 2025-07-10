@@ -5,7 +5,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace CompressionProject
 {
@@ -15,39 +14,24 @@ namespace CompressionProject
         private readonly List<char> _first20Chars;
         private readonly string[] _finalCodes;
         private readonly double charSpacing = 40;
-        private readonly double startX = 20;
+        private readonly double startX = 10;
         private readonly double y = 20;
         private readonly double codeY = 44;
         private readonly double bitY = 80;
-        private readonly double byteY = 110;
-        private readonly double hexY = 132;
         private readonly double bitSpacing = 10;
 
-        // Color palette for byte groups (expand as needed)
         private static readonly Color[] ByteGroupColors = new Color[]
         {
-            Colors.OrangeRed,
-            Colors.MediumSeaGreen,
-            Colors.DodgerBlue,
-            Colors.Goldenrod,
-            Colors.MediumVioletRed,
-            Colors.Teal,
-            Colors.SlateBlue,
-            Colors.CadetBlue,
-            Colors.DarkOrange,
-            Colors.MediumSlateBlue,
-            Colors.DarkKhaki,
-            Colors.Firebrick,
-            Colors.Crimson,
-            Colors.DarkCyan,
-            Colors.OliveDrab,
-            Colors.MediumTurquoise
+Colors.OrangeRed, Colors.MediumSeaGreen, Colors.DodgerBlue, Colors.Goldenrod,
+Colors.MediumVioletRed, Colors.Teal, Colors.SlateBlue, Colors.Crimson,
+Colors.DarkCyan, Colors.OliveDrab, Colors.CadetBlue, Colors.DarkOrange,
+Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoise
         };
 
         public HuffmanBitPackingAnimation(
-            Canvas canvas,
-            List<char> first20Chars,
-            string[] finalCodes // array of Huffman codes for each char, in order
+        Canvas canvas,
+        List<char> first20Chars,
+        string[] finalCodes
         )
         {
             _canvas = canvas;
@@ -59,9 +43,17 @@ namespace CompressionProject
         {
             _canvas.Children.Clear();
 
-            // 1. Draw original characters and their Huffman codes
+            // --- Character and Code Wrapping ---
+            double canvasWidth = _canvas.ActualWidth > 0 ? _canvas.ActualWidth : 800;
+            int charsPerLine = Math.Max(1, (int)((canvasWidth - startX - 20) / charSpacing));
+            int charRows = (_first20Chars.Count + charsPerLine - 1) / charsPerLine;
+
+            // Draw characters and codes, wrapped
             for (int i = 0; i < _first20Chars.Count; i++)
             {
+                int row = i / charsPerLine;
+                int col = i % charsPerLine;
+
                 var text = new TextBlock
                 {
                     Text = _first20Chars[i].ToString(),
@@ -69,134 +61,194 @@ namespace CompressionProject
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.Black
                 };
-                Canvas.SetLeft(text, startX + i * charSpacing);
-                Canvas.SetTop(text, y);
+                Canvas.SetLeft(text, startX + col * charSpacing);
+                Canvas.SetTop(text, y + row * 24);
                 _canvas.Children.Add(text);
 
-                var codeText = new TextBlock
-                {
-                    Text = _finalCodes[i],
-                    FontSize = 14,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = Brushes.Blue
-                };
-                Canvas.SetLeft(codeText, startX + i * charSpacing);
-                Canvas.SetTop(codeText, codeY);
-                _canvas.Children.Add(codeText);
+               
             }
 
-            // 2. Concatenate all codes into a single bitstream
+            // --- Bitstream Preparation ---
             StringBuilder bitStream = new StringBuilder();
             for (int i = 0; i < _first20Chars.Count; i++)
                 bitStream.Append(_finalCodes[i]);
             string bits = bitStream.ToString();
 
-            // 3. Draw the concatenated bitstream below the codes, coloring by byte group
-            for (int i = 0; i < bits.Length; i++)
-            {
-                int group = i / 8;
-                var bitText = new TextBlock
-                {
-                    Text = bits[i].ToString(),
-                    FontSize = 14,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = new SolidColorBrush(ByteGroupColors[group % ByteGroupColors.Length])
-                };
-                Canvas.SetLeft(bitText, startX + i * bitSpacing);
-                Canvas.SetTop(bitText, bitY);
-                _canvas.Children.Add(bitText);
-            }
-
-            // 4. Animate grouping into bytes and show decimal/hex, matching group color
+            int bitsPerRow = Math.Max(8, (int)Math.Floor((canvasWidth - (startX + 70)) / bitSpacing));
+            int bitRows = (bits.Length + bitsPerRow - 1) / bitsPerRow;
             int byteCount = (bits.Length + 7) / 8;
-            for (int b = 0; b < byteCount; b++)
+            int bytesPerRow = bitsPerRow / 8;
+            if (bytesPerRow < 1) bytesPerRow = 1;
+            double rowSpacing = 28;
+
+            // --- Row Y positions ---
+            double binaryRowY = codeY + charRows * 24 + 20;
+            double byteGroupsRowY = binaryRowY + rowSpacing * bitRows + 10;
+            double hexRowY = byteGroupsRowY + rowSpacing * ((byteCount + bytesPerRow - 1) / bytesPerRow) + 10;
+            double hexSummaryY = hexRowY + rowSpacing * ((byteCount + bytesPerRow - 1) / bytesPerRow) + 30;
+
+            // --- Draw Static Labels ---
+            var binaryLabel = new TextBlock
             {
-                int start = b * 8;
-                int len = Math.Min(8, bits.Length - start);
-                string byteStr = bits.Substring(start, len).PadRight(8, '0');
-                byte byteVal = Convert.ToByte(byteStr, 2);
-
-                Color groupColor = ByteGroupColors[b % ByteGroupColors.Length];
-
-                // Highlight this group of 8 bits
-                var rect = new Rectangle
-                {
-                    Width = bitSpacing * 8,
-                    Height = 22,
-                    Fill = new SolidColorBrush(Color.FromArgb(80, groupColor.R, groupColor.G, groupColor.B)),
-                    RadiusX = 5,
-                    RadiusY = 5
-                };
-                Canvas.SetLeft(rect, startX + start * bitSpacing - 2);
-                Canvas.SetTop(rect, byteY - 2);
-                _canvas.Children.Add(rect);
-
-                // Draw decimal value
-                var decText = new TextBlock
-                {
-                    Text = byteVal.ToString(),
-                    FontSize = 12,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = Brushes.Black
-                };
-                Canvas.SetLeft(decText, startX + start * bitSpacing);
-                Canvas.SetTop(decText, byteY);
-                _canvas.Children.Add(decText);
-
-                // Draw hex value in group color
-                var hexText = new TextBlock
-                {
-                    Text = byteVal.ToString("X2"),
-                    FontSize = 12,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = new SolidColorBrush(groupColor)
-                };
-                Canvas.SetLeft(hexText, startX + start * bitSpacing);
-                Canvas.SetTop(hexText, hexY);
-                _canvas.Children.Add(hexText);
-
-                await System.Threading.Tasks.Task.Delay(intervalMs);
-            }
-
-            // 5. Display the full compressed output as hex at the bottom, each in group color
-            double hexSummaryY = hexY + 30;
-            double hexSummaryX = startX;
-
-            // Add the label "Compressed Output (Hex):"
-            var hexLabel = new TextBlock
-            {
-                Text = "Compressed Output (Hex):",
+                Text = "Bitstream:",
                 FontSize = 14,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.Black
             };
-            Canvas.SetLeft(hexLabel, hexSummaryX);
-            Canvas.SetTop(hexLabel, hexSummaryY);
+            Canvas.SetLeft(binaryLabel, startX);
+            Canvas.SetTop(binaryLabel, binaryRowY);
+            _canvas.Children.Add(binaryLabel);
+
+            var byteLabel = new TextBlock
+            {
+                Text = "Byte Groups:",
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.Black
+            };
+            Canvas.SetLeft(byteLabel, startX);
+            Canvas.SetTop(byteLabel, byteGroupsRowY);
+            _canvas.Children.Add(byteLabel);
+
+            var hexLabel = new TextBlock
+            {
+                Text = "Hex:",
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.Black
+            };
+            Canvas.SetLeft(hexLabel, startX);
+            Canvas.SetTop(hexLabel, hexRowY);
             _canvas.Children.Add(hexLabel);
 
-            // Offset for the colored hex values so they appear after the label
-            double hexValuesX = hexSummaryX + 220; // Adjust as needed for your UI
+            var finalHexLabel = new TextBlock
+            {
+                Text = "Final Hex Output:",
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.Black
+            };
+            Canvas.SetLeft(finalHexLabel, startX);
+            Canvas.SetTop(finalHexLabel, hexSummaryY);
+            _canvas.Children.Add(finalHexLabel);
 
+            // --- Animate byte-by-byte, showing cumulative rows for bitstream, byte groups, and hex ---
             for (int b = 0; b < byteCount; b++)
             {
-                Color groupColor = ByteGroupColors[b % ByteGroupColors.Length];
-                int start = b * 8;
-                int len = Math.Min(8, bits.Length - start);
-                string byteStr = bits.Substring(start, len).PadRight(8, '0');
-                byte byteVal = Convert.ToByte(byteStr, 2);
-
-                var hexBlock = new TextBlock
+                // Remove only dynamic highlights from previous step
+                var toRemove = new List<UIElement>();
+                foreach (UIElement child in _canvas.Children)
                 {
-                    Text = byteVal.ToString("X2") + " ",
-                    FontSize = 14,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = new SolidColorBrush(groupColor)
-                };
-                Canvas.SetLeft(hexBlock, hexValuesX + b * 32); // Space out each hex value
-                Canvas.SetTop(hexBlock, hexSummaryY);
-                _canvas.Children.Add(hexBlock);
-            }
+                    if (child is Rectangle || (child is TextBlock tb && tb.Tag != null && tb.Tag.ToString() == "dynamic"))
+                        toRemove.Add(child);
+                }
+                foreach (var el in toRemove)
+                    _canvas.Children.Remove(el);
 
+                // --- Bitstream: Show all bits up to the current byte (cumulative), wrapping
+                int bitsToShow = Math.Min((b + 1) * 8, bits.Length);
+                for (int i = 0; i < bitsToShow; i++)
+                {
+                    int group = i / 8;
+                    int bitCol = i % bitsPerRow;
+                    int bitRow = i / bitsPerRow;
+
+                    var bitText = new TextBlock
+                    {
+                        Text = bits[i].ToString(),
+                        FontSize = 14,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = new SolidColorBrush(ByteGroupColors[group % ByteGroupColors.Length]),
+                        Tag = "dynamic"
+                    };
+                    Canvas.SetLeft(bitText, startX + 90 + bitCol * bitSpacing);
+                    Canvas.SetTop(bitText, binaryRowY + bitRow * rowSpacing);
+                    _canvas.Children.Add(bitText);
+                }
+
+                // --- Byte Groups: Show all byte rectangles, decimals, and hex up to current byte (cumulative)
+                for (int j = 0; j <= b; j++)
+                {
+                    int start = j * 8;
+                    int len = Math.Min(8, bits.Length - start);
+                    string byteStr = bits.Substring(start, len).PadRight(8, '0');
+                    byte byteVal = Convert.ToByte(byteStr, 2);
+
+                    int byteCol = j % bytesPerRow;
+                    int byteRow = j / bytesPerRow;
+                    Color groupColor = ByteGroupColors[j % ByteGroupColors.Length];
+
+                    // Highlight this group of 8 bits (rectangle)
+                    var rect = new Rectangle
+                    {
+                        Width = bitSpacing * 8,
+                        Height = 22,
+                        Fill = new SolidColorBrush(Color.FromArgb(80, groupColor.R, groupColor.G, groupColor.B)),
+                        RadiusX = 5,
+                        RadiusY = 5,
+                        Tag = "dynamic"
+                    };
+                    Canvas.SetLeft(rect, startX + 110 + byteCol * bitSpacing * 8 - 2);
+                    Canvas.SetTop(rect, byteGroupsRowY + byteRow * rowSpacing - 2);
+                    _canvas.Children.Add(rect);
+
+                    // Draw decimal value
+                    var decText = new TextBlock
+                    {
+                        Text = byteVal.ToString(),
+                        FontSize = 12,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = Brushes.Black,
+                        Tag = "dynamic"
+                    };
+                    Canvas.SetLeft(decText, startX + 110 + byteCol * bitSpacing * 8);
+                    Canvas.SetTop(decText, byteGroupsRowY + byteRow * rowSpacing);
+                    _canvas.Children.Add(decText);
+
+                    // Draw hex value in group color
+                    var hexText = new TextBlock
+                    {
+                        Text = byteVal.ToString("X2"),
+                        FontSize = 12,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = new SolidColorBrush(groupColor),
+                        Tag = "dynamic"
+                    };
+                    Canvas.SetLeft(hexText, startX + 110 + byteCol * bitSpacing * 8);
+                    Canvas.SetTop(hexText, hexRowY + byteRow * rowSpacing);
+                    _canvas.Children.Add(hexText);
+                }
+
+                // --- Final Hex Output: Show all bytes up to and including this one (cumulative)
+                double hexValuesX = startX + 160;
+                int hexPerRow = (int)Math.Floor((canvasWidth - hexValuesX) / 32);
+                if (hexPerRow < 1) hexPerRow = 1;
+                for (int j = 0; j <= b; j++)
+                {
+                    Color color = ByteGroupColors[j % ByteGroupColors.Length];
+                    int hStart = j * 8;
+                    int hLen = Math.Min(8, bits.Length - hStart);
+                    string hByteStr = bits.Substring(hStart, hLen).PadRight(8, '0');
+                    byte hByteVal = Convert.ToByte(hByteStr, 2);
+
+                    int hexRow = j / hexPerRow;
+                    int hexCol = j % hexPerRow;
+
+                    var hexBlock = new TextBlock
+                    {
+                        Text = hByteVal.ToString("X2") + " ",
+                        FontSize = 14,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = new SolidColorBrush(color),
+                        Tag = "dynamic"
+                    };
+                    Canvas.SetLeft(hexBlock, hexValuesX + hexCol * 32);
+                    Canvas.SetTop(hexBlock, hexSummaryY + hexRow * rowSpacing);
+                    _canvas.Children.Add(hexBlock);
+                }
+
+                await System.Threading.Tasks.Task.Delay(intervalMs);
+            }
         }
     }
 }

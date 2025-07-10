@@ -29,7 +29,7 @@ namespace CompressionProject
             Canvas canvas,
             HuffmanNode root,
             Dictionary<HuffmanNode, (double x, double y)> nodePositions,
-            List<HuffmanNode> leaves, // <-- Add this parameter
+            List<HuffmanNode> leaves,
             List<(HuffmanNode node, int level, int step)> allNodes,
             Color[] rowColors,
             List<char> first20Chars,
@@ -38,17 +38,15 @@ namespace CompressionProject
             _canvas = canvas;
             _root = root;
             _nodePositions = nodePositions;
-            _leaves = leaves; // <-- Store the leaves
+            _leaves = leaves;
             _allNodes = allNodes;
             RowColors = rowColors;
             _first20Chars = first20Chars;
             _codeTable = codeTable;
             _finalCodes = new string[_first20Chars.Count];
-
         }
 
-
-        public async void StartCodeAnimation(int intervalMs = 1000)
+        public async void StartCodeAnimation(int intervalMs = 300)
         {
             for (int i = 0; i < _first20Chars.Count; i++)
             {
@@ -93,40 +91,75 @@ namespace CompressionProject
             }
         }
 
-
-     public void DrawOriginalCharsAndCodes(Dictionary<int, string> codeProgress = null, int highlightIndex = -1)
+        // Draws the original characters and their codes, with the binary codes displayed in a wrapped, evenly spaced row (like the bit packing animation)
+        public void DrawOriginalCharsAndCodes(Dictionary<int, string> codeProgress = null, int highlightIndex = -1)
         {
             double charSpacing = 40;
-            double startX = 20;
+            double startX = 10;
             double y = 20;
             double codeY = y + 24;
 
+            // Draw the characters (always on one line)
             for (int i = 0; i < _first20Chars.Count; i++)
             {
                 var text = new TextBlock
                 {
                     Text = _first20Chars[i].ToString(),
-                    FontSize = 16,
+                    FontSize = 14,
                     FontWeight = FontWeights.Bold,
                     Foreground = (i == highlightIndex) ? Brushes.Red : Brushes.Black
                 };
                 Canvas.SetLeft(text, startX + i * charSpacing);
                 Canvas.SetTop(text, y);
                 _canvas.Children.Add(text);
+            }
 
+            // --- Draw the concatenated binary codes in a wrapped, evenly spaced row ---
+            // Concatenate all codes for the first 20 chars
+            StringBuilder bitStream = new StringBuilder();
+            for (int i = 0; i < _first20Chars.Count; i++)
+            {
                 string code = (codeProgress != null && codeProgress.ContainsKey(i)) ? codeProgress[i] : "";
-                string spacedCode = string.Join(" ", code.ToCharArray());
-                var codeText = new TextBlock
+                bitStream.Append(code);
+            }
+            string bits = bitStream.ToString();
+
+            double canvasWidth = _canvas.ActualWidth > 0 ? _canvas.ActualWidth : 800;
+            double bitSpacing = 10;
+            double bitRowY = codeY + 30;
+            int bitsPerRow = (int)Math.Floor((canvasWidth - (startX + 60)) / bitSpacing);
+            if (bitsPerRow < 8) bitsPerRow = 8;
+
+            // Label for the binary row
+            var binaryLabel = new TextBlock
+            {
+                Text = "Binary:",
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.Black
+            };
+            Canvas.SetLeft(binaryLabel, startX);
+            Canvas.SetTop(binaryLabel, bitRowY);
+            _canvas.Children.Add(binaryLabel);
+
+            // Draw the bits, wrapping to fit width (like bit packing animation)
+            int bitRow = 0;
+            for (int i = 0; i < bits.Length; i++)
+            {
+                int group = i / 8;
+                int bitCol = i % bitsPerRow;
+                if (bitCol == 0 && i != 0) bitRow++;
+
+                var bitText = new TextBlock
                 {
-                    Text = spacedCode,
+                    Text = bits[i].ToString(),
                     FontSize = 14,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.Blue
                 };
-                Canvas.SetLeft(codeText, startX + i * charSpacing);
-                Canvas.SetTop(codeText, codeY);
-                _canvas.Children.Add(codeText);
-
+                Canvas.SetLeft(bitText, startX + 65 + bitCol * bitSpacing); // 65px offset for label width
+                Canvas.SetTop(bitText, bitRowY + bitRow * 28);
+                _canvas.Children.Add(bitText);
             }
         }
 
@@ -259,6 +292,5 @@ namespace CompressionProject
         }
 
         public string[] GetFinalCodes() => _finalCodes;
-
     }
 }
