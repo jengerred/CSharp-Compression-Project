@@ -5,11 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CompressionProject"
         mc:Ignorable="d"
-        Title="CompressionProject - Huffman Compression Tool" Height="900" Width="800">
+        Title="CompressionProject - Huffman Compression Tool" Height="900" Width="1300">
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*" />
-            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="1000*" />
         </Grid.ColumnDefinitions>
 
         <!-- User Input/Output (Left Column) -->
@@ -43,13 +43,15 @@
                    FontSize="14"
                    Margin="0,0,0,10"
                    TextWrapping="Wrap"/>
-            <Grid>
-                <ListBox Name="FrequencyResultsListBox" Visibility="Collapsed" Height="200" />
                 
-                <Border BorderBrush="DarkGray" BorderThickness="2" CornerRadius="6" Padding="4" Margin="0,10,0,0">
-                    <Canvas Name="TreeAnimationCanvas" Visibility="Collapsed" Height="300" Width="400"/>
-               
-                </Border>
+            <Grid>
+                
+                <ListBox Name="FrequencyResultsListBox" Visibility="Collapsed" Height="200" />
+
+                    <Border BorderBrush="DarkGray" BorderThickness="2" CornerRadius="6" Padding="4" Margin="0,10,0,0">
+                        <Canvas Name="TreeAnimationCanvas" Visibility="Collapsed" Height="Auto" Width="900"/>
+                    </Border>
+   
             </Grid>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">

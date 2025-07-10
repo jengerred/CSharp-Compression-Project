@@ -34,8 +34,36 @@ namespace CompressionProject
         "I repeated this merging process—always picking the two smallest—until only one node remained at the very top: the root of the Huffman tree.\n\n" +
         "Why all this effort? Because this special binary tree (not a binary search tree!) is cleverly structured so that the most frequent characters end up closer to the root, which means their paths (and codes) are shorter and compression is more efficient!";
         }
+          public static string EncodeData()
+        {
+            return
+            "💾 Creating the Binary Code\n" +
+            "\nWith the Huffman tree built, I assigned a unique binary code to each character in your file:\n\n" +
+            "For every character in your file, I traced a path from the root of the tree down to that character’s leaf node (traversed).Every time I moved left, I added a ‘0’ to the code; every time I moved right, I added a ‘1’.\n\n" +
+            "This traversal produces a distinct sequence of bits (0s and 1s) for each character, based on its path through the tree. By replacing every character in your data with its binary code, I transformed your original text into a long, compressed stream of bits—ready for the next stage!";
+        }
 
+        public static string PackBinaryData()
+        {
+            return
+            "📦 Grouping the Binary Code into Bytes\n" +
+            "\nNow that your entire message is represented as a continuous stream of 0s and 1s, I prepared it for storage as a file:\n\n" +
+            "I grouped the binary digits into chunks of 8—each chunk forming a byte. If the last group was less than 8 bits, I padded it with zeros to fill the byte.\n\n" +
+            "Each byte was then written to the compressed file. For display and debugging, I also converted these bytes into hexadecimal numbers: that’s why you might see letters like A–F in the output—they’re just part of the standard hex notation for numbers above 9.\n\n" +
+            "By storing your data as a sequence of bytes, I turned your efficiently encoded bitstream into a real compressed file, ready for saving, sharing, or future decompression!";
+        }
 
+        public static string ShowCompressionResults(string originalFile, long originalSize, long compressedSize, string compressedFileName)
+        {
+            double ratio = (originalSize == 0) ? 0 : (double)compressedSize / originalSize;
+
+            return
+            "\n📦 Compressed Output (Hex): Actual File Result\n\n" +
+           $"\nThe original file, {originalFile}, that you uploaded had a size of {originalSize} bytes. After compressing it, the size is now {compressedSize} bytes.\n\n" +
+           $"That means the compression ratio is {(originalSize == 0 ? "N/A" : $"{ratio:P2}")}.\n\n" +
+           $"Your compressed file has been automatically saved as {compressedFileName} in your project folder.\n\n" +
+           "Below is the actual compressed output for your entire file, shown in hexadecimal—this is the true content of your file, not just the first 20 characters used for animation.\n";
+        }
         // Add more methods for other steps as you build out your narration
     }
 }

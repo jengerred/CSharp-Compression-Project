@@ -13,21 +13,27 @@ namespace CompressionProject
         public HuffmanNode Left { get; set; }
         public HuffmanNode Right { get; set; }
 
+        public double X { get; set; } // Drawing X position - Tree Animation
+        public double Y { get; set; } // Drawing Y position - Tree Animation
+        public HuffmanNode Parent { get; set; } // Code Animation
+
         public int CompareTo(HuffmanNode other) => Frequency.CompareTo(other.Frequency);
     }
 
-        // Extension method for shallow copying HuffmanNode
-        public static class HuffmanNodeExtensions
+    // Extension method for shallow copying HuffmanNode
+    public static class HuffmanNodeExtensions
+    {
+        public static HuffmanNode Copy(this HuffmanNode node)
         {
-            public static HuffmanNode Copy(this HuffmanNode node)
+            return new HuffmanNode
             {
-                return new HuffmanNode
-                {
-                    Character = node.Character,
-                    Frequency = node.Frequency,
-                    Left = node.Left,
-                    Right = node.Right
-                };
-            }
+                Character = node.Character,
+                Frequency = node.Frequency,
+                Left = node.Left,
+                Right = node.Right,
+                X = node.X,
+                Y = node.Y
+            };
         }
     }
+}
