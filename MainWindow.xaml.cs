@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -11,6 +13,11 @@ namespace CompressionProject
         private HuffmanTreeAnimation _treeAnimation;
         private NarrationSteps _narrationSteps;
         private HuffmanTree lastTree; // Store for decompression
+        private bool isDecompressed = false;
+
+        // Make these fields so they persist across steps
+        private List<char> first20ReadableChars;
+        private Dictionary<char, string> codeTable;
 
         public MainWindow()
         {
@@ -51,34 +58,46 @@ namespace CompressionProject
             string projectFolder = AppDomain.CurrentDomain.BaseDirectory;
             string compressedFile = Path.Combine(projectFolder, "Compression.bin");
 
-            // Extract the first 20 characters (including duplicates and in order)
-            List<char> first20Chars = new List<char>();
+            // Raw First 20 Characters
+            List<char> first20RawChars = new List<char>();
             using (FileStream fs = File.OpenRead(inputFile))
             {
                 int b;
-                while ((b = fs.ReadByte()) != -1 && first20Chars.Count < 20)
-                    first20Chars.Add((char)b);
+                while ((b = fs.ReadByte()) != -1 && first20RawChars.Count < 20)
+                    first20RawChars.Add((char)b);
             }
 
+            // --- 1. Extract the first 20 *readable* (printable) characters ---
+            first20ReadableChars = new List<char>();
+            using (FileStream fs = File.OpenRead(inputFile))
+            {
+                int b;
+                while ((b = fs.ReadByte()) != -1 && first20ReadableChars.Count < 20)
+                {
+                    char ch = (char)b;
+                    if (ch >= 32 && ch <= 126)
+                        first20ReadableChars.Add(ch);
+                }
+            }
 
             try
             {
-                // 1. Count character frequencies
+                // --- 2. Count character frequencies for ALL characters (0-255) ---
                 using (FileStream fs = File.OpenRead(inputFile))
                 {
                     int b;
                     while ((b = fs.ReadByte()) != -1)
                     {
-                        char c = (char)b;
                         if (frequencies[b] == null)
-                            frequencies[b] = new CharacterFrequency(c);
+                            frequencies[b] = new CharacterFrequency((char)b);
                         else
                             frequencies[b].Increment();
                     }
                 }
 
+                // --- 3. Prepare animFrequencies for animation (using first 20 chars) ---
                 CharacterFrequency[] animFrequencies = new CharacterFrequency[256];
-                foreach (char c in first20Chars)
+                foreach (char c in first20ReadableChars)
                 {
                     int idx = (int)c;
                     if (animFrequencies[idx] == null)
@@ -87,59 +106,59 @@ namespace CompressionProject
                         animFrequencies[idx].Increment();
                 }
 
-
-
-                // 2. Build Huffman tree and code table
+                // --- 4. Build Huffman tree and code table ---
                 HuffmanTree tree = new HuffmanTree();
                 tree.Build(frequencies);
-                Dictionary<char, string> codeTable = tree.CodeTable;
+                codeTable = tree.CodeTable;
 
-                // 3. Compress file
+                // --- 5. Compress file ---
                 CompressFile(inputFile, compressedFile, codeTable);
 
-   
-                // 4. Show actual compressed output (full hex output)
+                // --- 6. Show actual compressed output (full hex output) ---
                 using (FileStream fs = File.OpenRead(compressedFile))
                 {
                     byte[] allBytes = new byte[fs.Length];
                     int bytesRead = fs.Read(allBytes, 0, allBytes.Length);
-                    string hex = BitConverter.ToString(allBytes, 0, bytesRead).Replace("-", " ");
-                    CompressionResultsListBox.Items.Add(hex);
+                    string[] hexBytes = BitConverter.ToString(allBytes, 0, bytesRead).Split('-');
+
+                    int bytesPerLine = 16;
+                    for (int i = 0; i < hexBytes.Length; i += bytesPerLine)
+                    {
+                        string line = string.Join(" ", hexBytes, i, Math.Min(bytesPerLine, hexBytes.Length - i));
+                        CompressionResultsListBox.Items.Add(line);
+                    }
                 }
 
-                // 5. Show compression stats
+                // --- 7. Show compression stats ---
                 long originalSize = new FileInfo(inputFile).Length;
                 long compressedSize = new FileInfo(compressedFile).Length;
 
-
-                // 6. Show frequency table on the right
+                // --- 8. Show frequency table on the right ---
+                FrequencyResultsListBox.Items.Clear();
                 for (int ascii = 0; ascii < 256; ascii++)
                 {
                     if (frequencies[ascii] != null)
                     {
-                        string charDisplay = (ascii < 32 || ascii == 127) ? "" : frequencies[ascii].Character.ToString();
-                        string line = (charDisplay == "")
-                            ? $"({ascii})\t{frequencies[ascii].Frequency}"
-                            : $"{charDisplay}({ascii})\t{frequencies[ascii].Frequency}";
+                        char ch = frequencies[ascii].Character;
+                        int freq = frequencies[ascii].Frequency;
+                        string charDisplay = (ch >= 32 && ch <= 126) ? ch.ToString() : $"(0x{ascii:X2})";
+                        string line = $"{charDisplay}\t{freq}";
                         FrequencyResultsListBox.Items.Add(line);
                     }
                 }
 
-            
                 lastTree = tree; // Save the tree for decompression
-
 
                 // ----------- MANUAL NARRATION/ANIMATION STEPS SETUP -----------
 
-                // We'll generate the full compressed hex string here for the final step.
                 byte[] compressedBytes = File.ReadAllBytes(compressedFile);
                 string compressedHex = BitConverter.ToString(compressedBytes).Replace("-", " ");
                 string compressedFileName = Path.GetFileName(compressedFile);
 
-                // Prepare narration for each step (customize as needed)
                 List<string> narrationList = new List<string>
                 {
                     BehindTheScenesNarration.GetCompressionIntro(),
+                    BehindTheScenesNarration.ShowFirst20RawCharacters(),
                     BehindTheScenesNarration.HuffmanTree(),
                     BehindTheScenesNarration.EncodeData(),
                     BehindTheScenesNarration.PackBinaryData(),
@@ -149,45 +168,51 @@ namespace CompressionProject
                         compressedSize: compressedSize,
                         compressedFileName: compressedFileName
                     )
+                };
 
-                // Optionally add more narration strings for each merge step
-            };
+                _treeAnimation = new HuffmanTreeAnimation(TreeAnimationCanvas, animFrequencies, first20ReadableChars);
 
-                // Build animation object (needed for step count)
-                _treeAnimation = new HuffmanTreeAnimation(TreeAnimationCanvas, animFrequencies);
-
-
-                // After building _treeAnimation...
-                var allNodes = _treeAnimation.AllNodes; // Expose this property from HuffmanTreeAnimation
-                var nodePositions = _treeAnimation.GetNodePositions(); // Add a method/property to retrieve positions
-                var leaves = _treeAnimation.GetLeaves(); // Add a method/property to retrieve leaf nodes
+                var allNodes = _treeAnimation.AllNodes;
+                var nodePositions = _treeAnimation.GetNodePositions();
+                var leaves = _treeAnimation.GetLeaves();
 
                 var codeAnimation = new HuffmanCodeAnimation(
                     TreeAnimationCanvas,
-                    _treeAnimation.Root,           // Expose Root from HuffmanTreeAnimation
+                    _treeAnimation.Root,
                     nodePositions,
                     leaves,
                     allNodes,
-                    HuffmanTreeAnimation.RowColors, // Make RowColors public or pass as parameter
-                    first20Chars,      // Pass the actual first 20 characters
-                    codeTable          // Pass the Huffman code table for lookup
+                    HuffmanTreeAnimation.RowColors,
+                    first20ReadableChars,
+                    codeTable
                 );
-
-
 
                 var bitPackingAnimation = new HuffmanBitPackingAnimation(
                     TreeAnimationCanvas,
-                    first20Chars,
-                    codeAnimation.GetFinalCodes() // <-- Use the getter here
+                    first20ReadableChars,
+                    codeAnimation.GetFinalCodes()
                 );
-             
 
 
-                // Build steps to synchronize narration and animation
+                // 1. Get the root node of the Huffman tree
+                var root = tree.Root;
+
+                // 2. Get the row colors (assuming HuffmanTreeAnimation.RowColors is public/static)
+                var rowColors = HuffmanTreeAnimation.RowColors;
+
+                // 3. Generate the bitStream for the first 20 readable characters
+                string bitStream = string.Concat(first20ReadableChars.Select(c => codeTable.ContainsKey(c) ? codeTable[c] : ""));
+
+                // 4. Set the number of characters to restore
+                int numCharsToRestore = first20ReadableChars.Count;
+
+
+                var decompressionAnimation = new DecompressedTreeAnimation(TreeAnimationCanvas, inputFile);
+
+
+
                 var steps = new List<Action>();
 
-
-                // Step 0: Show intro and frequency table
                 steps.Add(() =>
                 {
                     BehindTheScenesTextBlock.Text = narrationList[0];
@@ -195,45 +220,108 @@ namespace CompressionProject
                     TreeAnimationCanvas.Visibility = Visibility.Collapsed;
                 });
 
-                // Step 1: Show tree animation and initial narration
                 steps.Add(() =>
                 {
                     BehindTheScenesTextBlock.Text = narrationList[1];
                     FrequencyResultsListBox.Visibility = Visibility.Collapsed;
                     TreeAnimationCanvas.Visibility = Visibility.Visible;
-                    _treeAnimation.StartAnimation();
+                    Raw20CharactersAnimation.DrawFirst20RawCharacters(TreeAnimationCanvas, first20RawChars);
                 });
-                // Step 2: Show Huffman code animation and narration
+
                 steps.Add(() =>
                 {
                     BehindTheScenesTextBlock.Text = narrationList[2];
                     FrequencyResultsListBox.Visibility = Visibility.Collapsed;
                     TreeAnimationCanvas.Visibility = Visibility.Visible;
-                    codeAnimation.StartCodeAnimation();
+                    _treeAnimation.StartAnimation();
                 });
 
-                // Step 3: Show bit packing animation and narration
                 steps.Add(() =>
                 {
                     BehindTheScenesTextBlock.Text = narrationList[3];
                     FrequencyResultsListBox.Visibility = Visibility.Collapsed;
                     TreeAnimationCanvas.Visibility = Visibility.Visible;
-                    bitPackingAnimation.StartBitPackingAnimation();
+                    codeAnimation.StartCodeAnimation();
                 });
 
-
-                // Step 4: Show actual compressed file hex output and narration
                 steps.Add(() =>
                 {
                     BehindTheScenesTextBlock.Text = narrationList[4];
+                    FrequencyResultsListBox.Visibility = Visibility.Collapsed;
+                    TreeAnimationCanvas.Visibility = Visibility.Visible;
+                    bitPackingAnimation.StartBitPackingAnimation();
+                });
+
+                steps.Add(() =>
+                {
+                    BehindTheScenesTextBlock.Text = narrationList[5];
                     FrequencyResultsListBox.Visibility = Visibility.Visible;
                     TreeAnimationCanvas.Visibility = Visibility.Collapsed;
                     var compressedHexOutput = new ShowCompressedHexOutput(FrequencyResultsListBox);
                     compressedHexOutput.Display(compressedFile);
                 });
 
+                // Add decompression narration steps
+                steps.Add(() =>
+                {
+                    if (!isDecompressed)
+                    {
+                        BehindTheScenesTextBlock.Text = BehindTheScenesNarration.ReadyToRestore();
+                        BehindTheScenesTextBlock.FontWeight = FontWeights.Bold;
+                        FrequencyResultsListBox.Visibility = Visibility.Collapsed;
+                        TreeAnimationCanvas.Visibility = Visibility.Collapsed;
+                    }
+                    else
+                    {
+                        BehindTheScenesTextBlock.Text = BehindTheScenesNarration.DecompressionComplete();
+                        BehindTheScenesTextBlock.FontWeight = FontWeights.Bold;
+                        FrequencyResultsListBox.Visibility = Visibility.Collapsed;
+                        TreeAnimationCanvas.Visibility = Visibility.Collapsed;
+                    }
+                });
 
-                // Create the manual stepper and start it
+                steps.Add(() =>
+                {
+                    BehindTheScenesTextBlock.Text = BehindTheScenesNarration.DecompressionTreeExplanation();
+                    BehindTheScenesTextBlock.FontSize = 14;
+                    BehindTheScenesTextBlock.FontWeight = FontWeights.Normal;
+                    FrequencyResultsListBox.Visibility = Visibility.Collapsed;
+                    TreeAnimationCanvas.Visibility = Visibility.Visible;
+
+                   
+                    decompressionAnimation.StartDecompressionAnimation();
+
+
+                });
+                steps.Add(() =>
+                {
+                    // Define the decompressed file path at the start of the step
+                    string decompressedFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Decompressed.txt");
+
+                    BehindTheScenesTextBlock.Text = BehindTheScenesNarration.ShowDecompressionResults(
+                        Path.GetFileName(decompressedFile)
+                    );
+                    FrequencyResultsListBox.Visibility = Visibility.Visible;
+                    TreeAnimationCanvas.Visibility = Visibility.Collapsed;
+
+                    FrequencyResultsListBox.Items.Clear();
+                    if (File.Exists(decompressedFile))
+                    {
+                        using (StreamReader sr = new StreamReader(decompressedFile))
+                        {
+                            while (!sr.EndOfStream)
+                            {
+                                FrequencyResultsListBox.Items.Add(sr.ReadLine());
+                            }
+                        }
+                    }
+                    else
+                    {
+                        FrequencyResultsListBox.Items.Add("Decompressed file not found.");
+                    }
+                });
+
+
 
                 _narrationSteps = new NarrationSteps(steps);
                 _narrationSteps.Start(); // Show step 0
@@ -263,21 +351,20 @@ namespace CompressionProject
             {
                 DecompressFile(compressedFile, decompressedFile, lastTree.Root);
 
-                // Show decompressed text preview first
                 using (StreamReader sr = new StreamReader(decompressedFile))
                 {
-                    for (int i = 0; i < 10 && !sr.EndOfStream; i++)
+                    while (!sr.EndOfStream)
+                    {
                         DecompressionResultsListBox.Items.Add(sr.ReadLine());
+                    }
                 }
-                DecompressionResultsListBox.Items.Add("-------------------------------------");
-                DecompressionResultsListBox.Items.Add($"Decompressed file: {decompressedFile}");
-
-                MessageBox.Show($"File decompressed to {decompressedFile}");
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error: {ex.Message}");
             }
+
+            isDecompressed = true;
         }
 
         private void CompressFile(string inputFile, string compressedFile, Dictionary<char, string> codeTable)

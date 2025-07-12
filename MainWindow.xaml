@@ -45,10 +45,10 @@
                    TextWrapping="Wrap"/>
                 
             <Grid>
-                
-                <ListBox Name="FrequencyResultsListBox" Visibility="Collapsed" Height="200" />
 
-                    <Border BorderBrush="DarkGray" BorderThickness="2" CornerRadius="6" Padding="4" Margin="0,10,0,0">
+                <ListBox Name="FrequencyResultsListBox" Visibility="Collapsed" Height="200"  Margin="0,10,0,0" />
+
+                    <Border BorderBrush="DarkGray" BorderThickness="2" CornerRadius="6" Padding="8" Margin="0,10,0,0">
                         <Canvas Name="TreeAnimationCanvas" Visibility="Collapsed" Height="450" Width="900"/>
                     </Border>
    

@@ -11,7 +11,7 @@ namespace CompressionProject
         private readonly ListBox _frequencyResultsListBox;
         private readonly double labelFontSize = 14;
         private readonly double hexFontSize = 14;
-        private readonly int hexPerLine = 16;
+        private readonly int hexPerLine = 45;
 
         public ShowCompressedHexOutput(ListBox frequencyResultsListBox)
         {

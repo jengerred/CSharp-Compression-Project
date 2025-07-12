@@ -16,13 +16,26 @@ namespace CompressionProject
         public static string GetCompressionIntro()
         {
             return "⚡ Done with Compression!\n" +
-                   "\nAlthough that was incredibly fast, here's what I was actually doing in the background to make your results both quick and accurate:\n\n" +
-                   "As soon as you clicked Compress, I sprang into action:\n\n" +
-                   "I read your file byte by byte.\n\n" +
-                   "For every character, I updated a frequency table—an array with 256 slots (one for each possible ASCII character, 0–255).\n\n" +
-                   "Each time a character appeared, I incremented its count in the array.\n\n" +
-                   "This frequency table is the foundation of efficient compression!";
+                           "\nAlthough that was incredibly fast, here's what I was actually doing in the background to make your results both quick and accurate:\n\n" +
+                           "As soon as you clicked Compress, I sprang into action:\n\n" +
+                           "I read your file byte by byte.\n\n" +
+                           "For every character, I updated a frequency table—an array with 256 slots (one for each possible ASCII character, 0–255).\n\n" +
+                           "Each time a character appeared, I incremented its count in the array.\n\n" +
+                           "This frequency table is the foundation of efficient compression! This character frequency chart displays every character and its frequency from your input file, providing a complete overview of your data.\n\n" +
+                           "💡 For clarity and readability in the steps ahead, I’ll be showcasing only the first 20 readable characters — so we wont be overwhelmed by a massive wall of text!";
         }
+
+        public static string ShowFirst20RawCharacters()
+        {
+            return
+                "👀 Preview: The First 20 Raw Characters\n\n" +
+                "Here are the first 20 characters from your file, shown exactly as they appear in the raw data. " +
+                "Depending on your file, you might see only normal, readable text—or you might notice some 'weird' or unreadable symbols. " +
+                "These unusual symbols can appear if your file contains special control characters, formatting codes, or other non-printable bytes that aren't meant to be displayed as regular text.\n\n" +
+                "To keep things clear and easy to understand, I'll focus only on the first 20 readable characters (letters, numbers, punctuation, and spaces) in the steps ahead. " +
+                "This way, you'll always get a preview that's meaningful and easy to follow, no matter what kind of file you use!";
+        }
+
 
         public static string HuffmanTree()
         {
@@ -64,6 +77,44 @@ namespace CompressionProject
            $"Your compressed file has been automatically saved as {compressedFileName} in your project folder.\n\n" +
            "Below is the actual compressed output for your entire file, shown in hexadecimal—this is the true content of your file, not just the first 20 characters used for animation.\n";
         }
+        public static string ReadyToRestore()
+        {
+            return "READY TO RESTORE YOUR FILE!?\n\n" +
+                   "⬇️ Click the Decompress button to begin! ⬇️\n\n" +
+                   "🌳 I'll use the Huffman tree we built earlier to guide the process, ensuring every character is brought back exactly as it was before compression.";
+        }
+
+        public static string DecompressionComplete()
+        {
+            return "✅ DECOMPRESSION COMPLETE! ✅\n\n" +
+                   "🎉 Your file has been fully restored. Every letter, space, and symbol is now back in its original place—thanks to the magic of Huffman coding! ✨";
+        }
+
+
+        public static string DecompressionTreeExplanation()
+        {
+            return
+                "🌳 Remember that Huffman tree we built during compression?\n\n" +
+                "I just put it to work! Here’s how your file was restored:\n\n" +
+                "• I read the compressed file bit by bit, following each '0' and '1' through the Huffman tree.\n" +
+                "• Every time I reached a leaf node, I uncovered one of your original characters and added it to the output.\n" +
+                "• This process continued until your entire file was rebuilt, character by character, exactly as it was before compression.\n\n" +
+                "✨ Thanks to the power of Huffman coding, not a single letter, space, or symbol was lost or changed. Your data is safe and sound!\n\n" +
+                "You can now open your restored file and see your original content, perfectly reconstructed.";
+        }
+
+        public static string ShowDecompressionResults(string decompressedFile)
+        {
+            return
+                "🔓 Decompression Results: Your File is Back!\n\n" +
+                $"Your file has been fully restored and saved as \"{decompressedFile}\" in your project files.\n\n" +
+                "Every letter, space, and symbol is back in its original place—no data lost, no changes made!\n\n" +
+                "You can now open this new file to see your original content, perfectly reconstructed and ready to use.";
+        }
+
+
+
+
         // Add more methods for other steps as you build out your narration
     }
 }

@@ -20,7 +20,7 @@ namespace CompressionProject
         private readonly Dictionary<char, string> _codeTable;
         private readonly double radius = 15;
         private readonly double margin = 10;
-        private readonly double levelHeight = 60;
+        private readonly double levelHeight = 40;
 
         private readonly List<HuffmanNode> _leaves;
         private readonly string[] _finalCodes;
@@ -37,13 +37,34 @@ namespace CompressionProject
         {
             _canvas = canvas;
             _root = root;
-            _nodePositions = nodePositions;
+            _nodePositions = FlipNodePositions(nodePositions); // <-- Flip Y here
             _leaves = leaves;
             _allNodes = allNodes;
             RowColors = rowColors;
             _first20Chars = first20Chars;
             _codeTable = codeTable;
             _finalCodes = new string[_first20Chars.Count];
+        }
+
+        /// <summary>
+        /// Flips the Y coordinate for all node positions so the tree is drawn with leaves at the bottom and root at the top,
+        /// regardless of the incoming nodePositions dictionary orientation.
+        /// </summary>
+        private Dictionary<HuffmanNode, (double x, double y)> FlipNodePositions(Dictionary<HuffmanNode, (double x, double y)> original)
+        {
+            double maxY = 0;
+            foreach (var pos in original.Values)
+                if (pos.y > maxY) maxY = pos.y;
+
+            double topOffset = 95; // <-- Add extra space above the root node (adjust as needed)
+
+            var flipped = new Dictionary<HuffmanNode, (double x, double y)>();
+            foreach (var kvp in original)
+            {
+                // Flip Y and add extra space at the top
+                flipped[kvp.Key] = (kvp.Value.x, maxY - (kvp.Value.y - margin) + margin + topOffset);
+            }
+            return flipped;
         }
 
         public async void StartCodeAnimation(int intervalMs = 300)
@@ -91,7 +112,6 @@ namespace CompressionProject
             }
         }
 
-        // Draws the original characters and their codes, with the binary codes displayed in a wrapped, evenly spaced row (like the bit packing animation)
         public void DrawOriginalCharsAndCodes(Dictionary<int, string> codeProgress = null, int highlightIndex = -1)
         {
             double charSpacing = 40;
@@ -99,7 +119,6 @@ namespace CompressionProject
             double y = 20;
             double codeY = y + 24;
 
-            // Draw the characters (always on one line)
             for (int i = 0; i < _first20Chars.Count; i++)
             {
                 var text = new TextBlock
@@ -114,8 +133,6 @@ namespace CompressionProject
                 _canvas.Children.Add(text);
             }
 
-            // --- Draw the concatenated binary codes in a wrapped, evenly spaced row ---
-            // Concatenate all codes for the first 20 chars
             StringBuilder bitStream = new StringBuilder();
             for (int i = 0; i < _first20Chars.Count; i++)
             {
@@ -130,7 +147,6 @@ namespace CompressionProject
             int bitsPerRow = (int)Math.Floor((canvasWidth - (startX + 60)) / bitSpacing);
             if (bitsPerRow < 8) bitsPerRow = 8;
 
-            // Label for the binary row
             var binaryLabel = new TextBlock
             {
                 Text = "Binary:",
@@ -142,7 +158,6 @@ namespace CompressionProject
             Canvas.SetTop(binaryLabel, bitRowY);
             _canvas.Children.Add(binaryLabel);
 
-            // Draw the bits, wrapping to fit width (like bit packing animation)
             int bitRow = 0;
             for (int i = 0; i < bits.Length; i++)
             {
@@ -157,7 +172,7 @@ namespace CompressionProject
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.Blue
                 };
-                Canvas.SetLeft(bitText, startX + 65 + bitCol * bitSpacing); // 65px offset for label width
+                Canvas.SetLeft(bitText, startX + 65 + bitCol * bitSpacing);
                 Canvas.SetTop(bitText, bitRowY + bitRow * 28);
                 _canvas.Children.Add(bitText);
             }
@@ -165,7 +180,6 @@ namespace CompressionProject
 
         private void DrawTreeWithCodePath(char c, int codeLength)
         {
-            // Find the leaf node for this character
             HuffmanNode leaf = null;
             foreach (var (node, level, step) in _allNodes)
             {
@@ -178,7 +192,6 @@ namespace CompressionProject
             if (leaf == null)
                 return;
 
-            // Build the path from root to leaf (as a stack)
             List<(HuffmanNode node, bool isLeft)> path = new List<(HuffmanNode, bool)>();
             HuffmanNode current = leaf;
             while (current != _root)
@@ -189,13 +202,11 @@ namespace CompressionProject
                 path.Add((current, isLeft));
                 current = current.Parent;
             }
-            path.Reverse(); // root to leaf
+            path.Reverse();
 
-            // Limit path to codeLength (for partial highlight)
             if (codeLength < path.Count)
                 path = path.GetRange(0, codeLength);
 
-            // Draw all edges
             foreach (var (node, level, nodeStep) in _allNodes)
             {
                 if (node.Left != null && _nodePositions.ContainsKey(node.Left))
@@ -226,7 +237,6 @@ namespace CompressionProject
                 }
             }
 
-            // Draw all nodes, highlighting those on the current path
             foreach (var (node, level, nodeStep) in _allNodes)
             {
                 var (x, y) = _nodePositions[node];

@@ -24,14 +24,20 @@ namespace CompressionProject
                 var left = nodes[0];
                 var right = nodes[1];
                 nodes.RemoveRange(0, 2);
-                nodes.Add(new HuffmanNode
+
+                var parentNode = new HuffmanNode
                 {
                     Character = null,
                     Frequency = left.Frequency + right.Frequency,
                     Left = left,
                     Right = right
-                });
+                };
+                left.Parent = parentNode;   // <-- Set parent pointers
+                right.Parent = parentNode;  // <-- Set parent pointers
+
+                nodes.Add(parentNode);
             }
+        
             Root = nodes.Count > 0 ? nodes[0] : null;
             CodeTable = new Dictionary<char, string>();
             if (Root != null)
