@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -91,7 +90,6 @@ namespace CompressionProject
         }
     }
 
-    // The main animation class: builds its own tree and animates only decompression
     public class DecompressedTreeAnimation
     {
         private readonly Canvas _canvas;
@@ -100,21 +98,16 @@ namespace CompressionProject
         private readonly List<(DecompressedHuffmanNode node, int level, int step)> _allNodes;
         private readonly Color[] RowColors;
 
-        // Node size and spacing
         private readonly double radius = 15;
-        // Increased margin for longer lines (was 10)
-        private readonly double margin = 40;
+        private readonly double margin = 30;
         private readonly double levelHeight = 40;
-
-        // Increased offset to shift the tree further right (was 40)
-        private readonly double treeXOffset = 150;
+        private readonly double treeOffsetX = 150;
 
         private readonly string _bitStream;
         private readonly int _numCharsToRestore;
         private readonly List<char> _restoredChars = new List<char>();
         private bool _isAnimating = false;
 
-        // For persistent path highlighting
         private List<(DecompressedHuffmanNode parent, DecompressedHuffmanNode child)> _highlightedEdges = new List<(DecompressedHuffmanNode, DecompressedHuffmanNode)>();
         private List<DecompressedHuffmanNode> _highlightedNodes = new List<DecompressedHuffmanNode>();
 
@@ -161,92 +154,83 @@ namespace CompressionProject
             _root = tree.Root;
             var codeTable = tree.CodeTable;
 
-            // 4. Build animation structures (allNodes, nodePositions)
+            // 4. Assign node positions recursively to center the tree as a whole, with an offset
             _allNodes = new List<(DecompressedHuffmanNode node, int level, int step)>();
             _nodePositions = new Dictionary<DecompressedHuffmanNode, (double x, double y)>();
-            var levelWidths = new Dictionary<int, int>();
-            ComputeLevelWidths(_root, 0, levelWidths);
 
-            // Find max level and count leaf nodes for bottom row centering
-            int maxLevel = levelWidths.Keys.Max();
-            int leafCount = 0;
-            GetLeafCount(_root, 0, maxLevel, ref leafCount);
+            int maxLevel = GetMaxLevel(_root);
+            int leafCount = GetLeafCount(_root);
 
-            BuildAllNodesAndPositions(_root, 0, 0, _allNodes, _nodePositions, levelWidths, maxLevel, leafCount);
+            double canvasWidth = _canvas.ActualWidth > 0 ? _canvas.ActualWidth : 600;
+            double nodeSpacing = 2 * radius + margin;
+            double totalTreeWidth = leafCount * nodeSpacing;
+            double startX = (canvasWidth - totalTreeWidth) / 2 + radius + treeOffsetX;
+            double nextLeafX = startX;
+            AssignNodePositions(_root, 0, ref nextLeafX, _nodePositions, nodeSpacing, 100, levelHeight + margin);
+
+            // Build _allNodes for animation and drawing
+            BuildAllNodesList(_root, 0, 0, _allNodes);
 
             // 5. Generate bitstream for only the first 20 readable characters
             _bitStream = string.Concat(first20ReadableChars.Select(c => codeTable.ContainsKey(c) ? codeTable[c] : ""));
             _numCharsToRestore = first20ReadableChars.Count;
         }
 
-        // Compute the number of nodes at each level for centering
-        private void ComputeLevelWidths(DecompressedHuffmanNode node, int level, Dictionary<int, int> levelWidths)
-        {
-            if (node == null) return;
-            if (!levelWidths.ContainsKey(level))
-                levelWidths[level] = 0;
-            levelWidths[level]++;
-            ComputeLevelWidths(node.Left, level + 1, levelWidths);
-            ComputeLevelWidths(node.Right, level + 1, levelWidths);
-        }
-
-        // Count leaf nodes for bottom row centering
-        private void GetLeafCount(DecompressedHuffmanNode node, int level, int maxLevel, ref int leafCount)
-        {
-            if (node == null) return;
-            if (level == maxLevel && node.Left == null && node.Right == null)
-            {
-                leafCount++;
-            }
-            GetLeafCount(node.Left, level + 1, maxLevel, ref leafCount);
-            GetLeafCount(node.Right, level + 1, maxLevel, ref leafCount);
-        }
-
-        // Center nodes at each level, with special handling for the bottom row
-        private void BuildAllNodesAndPositions(
-            DecompressedHuffmanNode node, int level, int step,
-            List<(DecompressedHuffmanNode node, int level, int step)> allNodes,
+        // Recursively assign positions: leaves are spaced evenly, parents above midpoint of children
+        private double AssignNodePositions(
+            DecompressedHuffmanNode node,
+            int level,
+            ref double nextLeafX,
             Dictionary<DecompressedHuffmanNode, (double x, double y)> nodePositions,
-            Dictionary<int, int> levelWidths,
-            int maxLevel,
-            int leafCount)
+            double nodeSpacing,
+            double yStart,
+            double levelHeight)
         {
-            if (node == null) return;
-            allNodes.Add((node, level, step));
-            int nodesInLevel = levelWidths[level];
-            double canvasWidth = _canvas.ActualWidth > 0 ? _canvas.ActualWidth : 600; // fallback
-            double totalWidth = nodesInLevel * (radius * 2 + margin);
+            if (node == null) return 0;
 
+            double y = yStart + level * levelHeight;
             double x;
-            if (level == maxLevel)
+
+            if (node.Left == null && node.Right == null)
             {
-                // Center the bottom row (leaf nodes)
-                double leafTotalWidth = leafCount * (radius * 2 + margin);
-                double leafStart = (canvasWidth - leafTotalWidth) / 2 + treeXOffset;
-                int leafIndex = GetLeafIndex(node);
-                x = leafStart + leafIndex * (radius * 2 + margin) + radius;
+                // Leaf node: assign position from left to right
+                x = nextLeafX;
+                nextLeafX += nodeSpacing;
             }
             else
             {
-                x = (canvasWidth - totalWidth) / 2 + step * (radius * 2 + margin) + radius + treeXOffset;
+                // Internal node: position is the midpoint of its children
+                double leftX = AssignNodePositions(node.Left, level + 1, ref nextLeafX, nodePositions, nodeSpacing, yStart, levelHeight);
+                double rightX = AssignNodePositions(node.Right, level + 1, ref nextLeafX, nodePositions, nodeSpacing, yStart, levelHeight);
+                x = (leftX + rightX) / 2.0;
             }
-            double y = 100 + level * (levelHeight + margin);
-            nodePositions[node] = (x, y);
 
-            BuildAllNodesAndPositions(node.Left, level + 1, step * 2, allNodes, nodePositions, levelWidths, maxLevel, leafCount);
-            BuildAllNodesAndPositions(node.Right, level + 1, step * 2 + 1, allNodes, nodePositions, levelWidths, maxLevel, leafCount);
+            nodePositions[node] = (x, y);
+            return x;
         }
 
-        // Helper to get the index of a leaf node (for bottom row centering)
-        private int leafCounter = 0;
-        private int GetLeafIndex(DecompressedHuffmanNode node)
+        // Helper to build _allNodes for animation and drawing
+        private void BuildAllNodesList(DecompressedHuffmanNode node, int level, int step, List<(DecompressedHuffmanNode node, int level, int step)> allNodes)
+        {
+            if (node == null) return;
+            allNodes.Add((node, level, step));
+            BuildAllNodesList(node.Left, level + 1, step * 2, allNodes);
+            BuildAllNodesList(node.Right, level + 1, step * 2 + 1, allNodes);
+        }
+
+        // Get the maximum depth of the tree
+        private int GetMaxLevel(DecompressedHuffmanNode node)
         {
             if (node == null) return -1;
-            if (node.Left == null && node.Right == null)
-                return leafCounter++;
-            int left = GetLeafIndex(node.Left);
-            int right = GetLeafIndex(node.Right);
-            return left != -1 ? left : right;
+            return 1 + Math.Max(GetMaxLevel(node.Left), GetMaxLevel(node.Right));
+        }
+
+        // Get the number of leaf nodes
+        private int GetLeafCount(DecompressedHuffmanNode node)
+        {
+            if (node == null) return 0;
+            if (node.Left == null && node.Right == null) return 1;
+            return GetLeafCount(node.Left) + GetLeafCount(node.Right);
         }
 
         public async void StartDecompressionAnimation(int intervalMs = 400)
@@ -356,8 +340,20 @@ namespace CompressionProject
             foreach (var (node, level, nodeStep) in _allNodes)
             {
                 var (x, y) = _nodePositions[node];
-                int colorIndex = Math.Min(level, RowColors.Length - 1);
-                Color color = _highlightedNodes.Contains(node) ? Colors.DeepSkyBlue : RowColors[colorIndex];
+                Color color;
+                if (_highlightedNodes.Contains(node))
+                {
+                    color = Colors.DeepSkyBlue;
+                }
+                else if (node.Left == null && node.Right == null)
+                {
+                    color = Colors.LightSkyBlue;
+                }
+                else
+                {
+                    int colorIndex = Math.Min(level, RowColors.Length - 1);
+                    color = RowColors[colorIndex];
+                }
                 DrawNode(node, x, y, radius, color);
             }
         }
@@ -368,7 +364,6 @@ namespace CompressionProject
             double dy = y2 - y1;
             double dist = Math.Sqrt(dx * dx + dy * dy);
             if (dist == 0) dist = 1;
-            // No change here: the longer lines are achieved by increasing margin between nodes
             double xEnd = x2 - dx / dist * radius;
             double yEnd = y2 - dy / dist * radius;
 
@@ -404,7 +399,7 @@ namespace CompressionProject
                 Text = label,
                 Foreground = Brushes.Black,
                 FontWeight = FontWeights.Bold,
-                FontSize = 12
+                FontSize = 10
             };
             text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             double textWidth = text.DesiredSize.Width;

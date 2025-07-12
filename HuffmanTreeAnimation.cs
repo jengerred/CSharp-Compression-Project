@@ -16,12 +16,12 @@ public class HuffmanTreeAnimation
     private System.Windows.Threading.DispatcherTimer _timer;
 
     // Visual parameters
-    private const double radius = 18; // Node radius for compactness
-    private const double spacing = 14;
-    private const double margin = 20;
+    private const double radius = 15;      // Node radius
+    private const double margin = 30;      // Horizontal margin between nodes
+    private const double levelHeight = 70; // Vertical spacing between levels
+    private const double treeOffsetX = 150; // Move tree further right (adjust as needed)
+    private const double treeOffsetY = 90; // Move tree further down (increased for more vertical space)
     private const int fontSize = 10;
-    private const double levelHeight = 80;
-
 
     public static readonly Color[] RowColors = new Color[]
     {
@@ -36,34 +36,8 @@ public class HuffmanTreeAnimation
     public List<(HuffmanNode node, int level, int step)> AllNodes => _allNodes;
     public HuffmanNode Root => _allNodes.Count > 0 ? _allNodes.Last().node : null;
 
-    public Dictionary<HuffmanNode, (double x, double y)> GetNodePositions()
-    {
-        var nodesByLevel = _allNodes.GroupBy(n => n.level).OrderBy(g => g.Key).ToList();
-        int maxLevel = nodesByLevel.Any() ? nodesByLevel.Max(g => g.Key) : 0;
-        var nodePositions = new Dictionary<HuffmanNode, (double x, double y)>();
-        for (int level = 0; level <= maxLevel; level++)
-        {
-            if (!nodesByLevel.Any(g => g.Key == level))
-                continue;
-            var nodesAtLevel = nodesByLevel.First(g => g.Key == level).Select(n => n.node).ToList();
-            double y = _canvas.Height - margin - radius - (levelHeight * (maxLevel - level));
-            double totalWidth = nodesAtLevel.Count * (2 * radius + spacing) - spacing;
-            double xStart = (_canvas.Width - totalWidth) / 2 + radius;
-            for (int i = 0; i < nodesAtLevel.Count; i++)
-            {
-                double x = xStart + i * (2 * radius + spacing);
-                nodePositions[nodesAtLevel[i]] = (x, y);
-            }
-        }
-        return nodePositions;
-    }
-
-    public List<HuffmanNode> GetLeaves()
-    {
-        return _allNodes.Where(n => n.level == 0).Select(n => n.node).ToList();
-    }
-
-    public static Color[] RowColorsPublic => RowColors;
+    // Node positions for drawing
+    private Dictionary<HuffmanNode, (double x, double y)> _nodePositions;
 
     public HuffmanTreeAnimation(Canvas canvas, CharacterFrequency[] frequencies, List<char> first20ReadableChars)
     {
@@ -104,6 +78,72 @@ public class HuffmanTreeAnimation
             _mergePairs.Add((left, right, parent, step));
             working.Add(parent);
             step++;
+        }
+
+        // Assign node positions recursively (like DecompressedTreeAnimation)
+        _nodePositions = new Dictionary<HuffmanNode, (double x, double y)>();
+        int leafCount = leaves.Count;
+        double canvasWidth = _canvas.ActualWidth > 0 ? _canvas.ActualWidth : 600;
+        double nodeSpacing = 2 * radius + margin;
+        double totalTreeWidth = leafCount * nodeSpacing;
+        double startX = (canvasWidth - totalTreeWidth) / 2 + radius + treeOffsetX;
+        double nextLeafX = startX;
+        if (Root != null)
+            AssignNodePositions(Root, 0, ref nextLeafX, _nodePositions, nodeSpacing, treeOffsetY, levelHeight);
+    }
+
+    // Recursive assignment: leaves spaced evenly, parents above midpoint of children
+    private double AssignNodePositions(
+        HuffmanNode node,
+        int level,
+        ref double nextLeafX,
+        Dictionary<HuffmanNode, (double x, double y)> nodePositions,
+        double nodeSpacing,
+        double yStart,
+        double levelHeight)
+    {
+        if (node == null) return 0;
+
+        double y = yStart + level * levelHeight;
+        double x;
+
+        if (node.Left == null && node.Right == null)
+        {
+            x = nextLeafX;
+            nextLeafX += nodeSpacing;
+        }
+        else
+        {
+            double leftX = AssignNodePositions(node.Left, level + 1, ref nextLeafX, nodePositions, nodeSpacing, yStart, levelHeight);
+            double rightX = AssignNodePositions(node.Right, level + 1, ref nextLeafX, nodePositions, nodeSpacing, yStart, levelHeight);
+            x = (leftX + rightX) / 2.0;
+        }
+
+        nodePositions[node] = (x, y);
+        return x;
+    }
+
+    public Dictionary<HuffmanNode, (double x, double y)> GetNodePositions()
+    {
+        return _nodePositions;
+    }
+
+    public List<HuffmanNode> GetLeaves()
+    {
+        var leaves = new List<HuffmanNode>();
+        CollectLeaves(Root, leaves);
+        return leaves;
+    }
+
+    private void CollectLeaves(HuffmanNode node, List<HuffmanNode> leaves)
+    {
+        if (node == null) return;
+        if (node.Left == null && node.Right == null)
+            leaves.Add(node);
+        else
+        {
+            CollectLeaves(node.Left, leaves);
+            CollectLeaves(node.Right, leaves);
         }
     }
 
@@ -163,49 +203,23 @@ public class HuffmanTreeAnimation
             _canvas.Children.Add(text);
         }
 
-        // --- Draw the tree below the characters ---
-        var nodesByLevel = _allNodes
-            .Where(n => n.step <= step)
-            .GroupBy(n => n.level)
-            .OrderBy(g => g.Key)
-            .ToList();
-
-        int maxLevel = nodesByLevel.Any() ? nodesByLevel.Max(g => g.Key) : 0;
-
-        var nodePositions = new Dictionary<HuffmanNode, (double x, double y)>();
-        for (int level = 0; level <= maxLevel; level++)
-        {
-            if (!nodesByLevel.Any(g => g.Key == level))
-                continue;
-            var nodesAtLevel = nodesByLevel.First(g => g.Key == level).Select(n => n.node).ToList();
-            double nodeY = _canvas.Height - margin - radius - (level * levelHeight);
-    
-            double totalWidth = nodesAtLevel.Count * (2 * radius + spacing) - spacing;
-            double xStart = (_canvas.Width - totalWidth) / 2 + radius;
-            for (int i = 0; i < nodesAtLevel.Count; i++)
-            {
-                double x = xStart + i * (2 * radius + spacing);
-                nodePositions[nodesAtLevel[i]] = (x, nodeY);
-            }
-        }
-
         // Draw all edges first (under nodes)
         foreach (var (node, level, nodeStep) in _allNodes.Where(n => n.step <= step))
         {
-            if (node.Left != null && nodePositions.ContainsKey(node.Left))
+            if (node.Left != null && _nodePositions.ContainsKey(node.Left))
             {
-                DrawEdge(nodePositions[node].x, nodePositions[node].y, nodePositions[node.Left].x, nodePositions[node.Left].y);
+                DrawEdge(_nodePositions[node].x, _nodePositions[node].y, _nodePositions[node.Left].x, _nodePositions[node.Left].y);
             }
-            if (node.Right != null && nodePositions.ContainsKey(node.Right))
+            if (node.Right != null && _nodePositions.ContainsKey(node.Right))
             {
-                DrawEdge(nodePositions[node].x, nodePositions[node].y, nodePositions[node.Right].x, nodePositions[node.Right].y);
+                DrawEdge(_nodePositions[node].x, _nodePositions[node].y, _nodePositions[node.Right].x, _nodePositions[node.Right].y);
             }
         }
 
         // Draw all nodes (on top)
         foreach (var (node, level, nodeStep) in _allNodes.Where(n => n.step <= step))
         {
-            var (x, nodeY) = nodePositions[node];
+            var (x, nodeY) = _nodePositions[node];
             int colorIndex = Math.Min(level, RowColors.Length - 1);
             Color color = RowColors[colorIndex];
 
@@ -242,13 +256,13 @@ public class HuffmanTreeAnimation
     {
         var ellipse = new Ellipse
         {
-            Width = radius * 2.2,
-            Height = radius * 2,
+            Width = radius * 2.0,
+            Height = radius * 2.0,
             Fill = new SolidColorBrush(color),
             Stroke = Brushes.Black,
             StrokeThickness = 1.5
         };
-        Canvas.SetLeft(ellipse, x - radius * 1.1);
+        Canvas.SetLeft(ellipse, x - radius);
         Canvas.SetTop(ellipse, y - radius);
         _canvas.Children.Add(ellipse);
 

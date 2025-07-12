@@ -9,9 +9,9 @@ using System.Windows.Media;
 
 namespace CompressionProject
 {
-    public static class Raw20CharactersAnimation
+    class DrawFirst20ReadableCharacters
     {
-        public static void DrawFirst20RawCharacters(Canvas canvas, List<char> chars)
+        public static void DrawFirst20ReadableChars(Canvas canvas, List<char> chars)
         {
             canvas.Children.Clear();
 
@@ -26,12 +26,14 @@ namespace CompressionProject
                     Text = chars[i].ToString(),
                     FontSize = 18,
                     FontWeight = FontWeights.Bold,
-                    Foreground = Brushes.Blue
+                    Foreground = Brushes.Green // Use a different color if you want to distinguish
                 };
                 Canvas.SetLeft(text, startX + i * charSpacing);
                 Canvas.SetTop(text, y);
                 canvas.Children.Add(text);
             }
         }
+
+
     }
 }

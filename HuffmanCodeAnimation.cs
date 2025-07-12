@@ -25,6 +25,9 @@ namespace CompressionProject
         private readonly List<HuffmanNode> _leaves;
         private readonly string[] _finalCodes;
 
+        // Offset to move the tree further down in the canvas
+        private readonly double treeYOffset = 50; // Increase this value to move the tree down
+
         public HuffmanCodeAnimation(
             Canvas canvas,
             HuffmanNode root,
@@ -37,7 +40,7 @@ namespace CompressionProject
         {
             _canvas = canvas;
             _root = root;
-            _nodePositions = FlipNodePositions(nodePositions); // <-- Flip Y here
+            _nodePositions = OffsetNodePositions(nodePositions, treeYOffset); // Apply vertical offset
             _leaves = leaves;
             _allNodes = allNodes;
             RowColors = rowColors;
@@ -47,24 +50,17 @@ namespace CompressionProject
         }
 
         /// <summary>
-        /// Flips the Y coordinate for all node positions so the tree is drawn with leaves at the bottom and root at the top,
-        /// regardless of the incoming nodePositions dictionary orientation.
+        /// Shifts the Y coordinate for all node positions so the tree is drawn further down in the canvas,
+        /// avoiding overlap with the bitstream and character labels.
         /// </summary>
-        private Dictionary<HuffmanNode, (double x, double y)> FlipNodePositions(Dictionary<HuffmanNode, (double x, double y)> original)
+        private Dictionary<HuffmanNode, (double x, double y)> OffsetNodePositions(Dictionary<HuffmanNode, (double x, double y)> original, double yOffset)
         {
-            double maxY = 0;
-            foreach (var pos in original.Values)
-                if (pos.y > maxY) maxY = pos.y;
-
-            double topOffset = 95; // <-- Add extra space above the root node (adjust as needed)
-
-            var flipped = new Dictionary<HuffmanNode, (double x, double y)>();
+            var shifted = new Dictionary<HuffmanNode, (double x, double y)>();
             foreach (var kvp in original)
             {
-                // Flip Y and add extra space at the top
-                flipped[kvp.Key] = (kvp.Value.x, maxY - (kvp.Value.y - margin) + margin + topOffset);
+                shifted[kvp.Key] = (kvp.Value.x, kvp.Value.y + yOffset);
             }
-            return flipped;
+            return shifted;
         }
 
         public async void StartCodeAnimation(int intervalMs = 300)

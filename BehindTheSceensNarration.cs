@@ -10,8 +10,10 @@ namespace CompressionProject
     {
         public static string GetWaitingMessage()
         {
-            return "Please use the \"Browse...\" button to select an ASCII text file for me to process. Waiting for user input.....";
+            return "I'm ready when you are! You can upload your own ASCII text file using the \"Browse...\" button, then click \"Compress\" to start. Or, simply click the \"Small Demo\" or \"Large Demo\" button to automatically load and compress a sample file. When you're ready to see the decompression, click the \"Decompress\" button. If the visualization is too large for the page, you can make it full screen for the best experience. I look forward to compressing whichever file you choose!";
         }
+
+
 
         public static string GetCompressionIntro()
         {
@@ -80,8 +82,8 @@ namespace CompressionProject
         public static string ReadyToRestore()
         {
             return "READY TO RESTORE YOUR FILE!?\n\n" +
-                   "⬇️ Click the Decompress button to begin! ⬇️\n\n" +
-                   "🌳 I'll use the Huffman tree we built earlier to guide the process, ensuring every character is brought back exactly as it was before compression.";
+                  "⬅️ Click the \"Decompress\" button to begin! ⬅️\n\n" +
+                  "Or click the ⬇️ \"Next\" button ⬇️ to continue with just the first 20 characters.";
         }
 
         public static string DecompressionComplete()
