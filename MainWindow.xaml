@@ -210,6 +210,20 @@
                         Click="DecompressButton_Click"
                         Style="{StaticResource StepButtonStyle}"/>
             </Grid>
+            
+            <!-- Tip: Wait for animation completion before stepping -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                <TextBlock Text="💡"
+               Foreground="Gold"
+               FontSize="16"
+               VerticalAlignment="Center"
+               Margin="0,0,6,0"/>
+                <TextBlock Text="Tip: For pages with animation, allow the animation to complete before clicking Next or Previous."
+               FontStyle="Italic"
+               Foreground="Black"
+               FontSize="14"
+               VerticalAlignment="Center"/>
+            </StackPanel>
 
             <!-- Step Buttons (Orange, with arrows and distinct hover color) -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">

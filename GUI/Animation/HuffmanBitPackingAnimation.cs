@@ -5,14 +5,27 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
-namespace CompressionProject
+namespace CompressionProject.GUI.Animation
 {
+    // HuffmanBitPackingAnimation visually demonstrates how the encoded Huffman bits
+    // are grouped into bytes and then displayed as hexadecimal values.
+    // This makes the abstract idea of "bit packing" concrete and easy to follow,
+    // especially for beginners who want to see how their data is transformed
+    // from characters, to bits, to bytes, and finally to hex output.
     public class HuffmanBitPackingAnimation
     {
+        // The canvas where the animation is drawn.
         private readonly Canvas _canvas;
+
+        // The first 20 characters being encoded and visualized.
         private readonly List<char> _first20Chars;
+
+        // The Huffman codes (as strings of '0's and '1's) for those characters.
         private readonly string[] _finalCodes;
+
+        // Layout and spacing constants for the animation visuals.
         private readonly double charSpacing = 40;
         private readonly double startX = 10;
         private readonly double y = 20;
@@ -20,18 +33,22 @@ namespace CompressionProject
         private readonly double bitY = 80;
         private readonly double bitSpacing = 10;
 
+        // Distinct colors for each byte group, to visually separate packed bytes.
         private static readonly Color[] ByteGroupColors = new Color[]
         {
-Colors.OrangeRed, Colors.MediumSeaGreen, Colors.DodgerBlue, Colors.Goldenrod,
-Colors.MediumVioletRed, Colors.Teal, Colors.SlateBlue, Colors.Crimson,
-Colors.DarkCyan, Colors.OliveDrab, Colors.CadetBlue, Colors.DarkOrange,
-Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoise
+            Colors.OrangeRed, Colors.MediumSeaGreen, Colors.DodgerBlue, Colors.Goldenrod,
+            Colors.MediumVioletRed, Colors.Teal, Colors.SlateBlue, Colors.Crimson,
+            Colors.DarkCyan, Colors.OliveDrab, Colors.CadetBlue, Colors.DarkOrange,
+            Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoise
         };
 
+        /// <summary>
+        /// Creates a new bit packing animation for the given characters and codes.
+        /// </summary>
         public HuffmanBitPackingAnimation(
-        Canvas canvas,
-        List<char> first20Chars,
-        string[] finalCodes
+            Canvas canvas,
+            List<char> first20Chars,
+            string[] finalCodes
         )
         {
             _canvas = canvas;
@@ -39,16 +56,22 @@ Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoi
             _finalCodes = finalCodes;
         }
 
+        /// <summary>
+        /// Starts the animated visualization of packing Huffman codes into bytes and hex.
+        /// Each animation frame adds more bits/bytes, showing the cumulative process.
+        /// </summary>
+        /// <param name="intervalMs">How long to wait (in milliseconds) between animation steps.</param>
         public async void StartBitPackingAnimation(int intervalMs = 900)
         {
             _canvas.Children.Clear();
 
             // --- Character and Code Wrapping ---
+            // Calculate how many characters fit per line, and how many rows are needed.
             double canvasWidth = _canvas.ActualWidth > 0 ? _canvas.ActualWidth : 800;
             int charsPerLine = Math.Max(1, (int)((canvasWidth - startX - 20) / charSpacing));
             int charRows = (_first20Chars.Count + charsPerLine - 1) / charsPerLine;
 
-            // Draw characters and codes, wrapped
+            // Draw each character, spaced out and wrapped to new lines as needed.
             for (int i = 0; i < _first20Chars.Count; i++)
             {
                 int row = i / charsPerLine;
@@ -64,16 +87,16 @@ Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoi
                 Canvas.SetLeft(text, startX + col * charSpacing);
                 Canvas.SetTop(text, y + row * 24);
                 _canvas.Children.Add(text);
-
-               
             }
 
             // --- Bitstream Preparation ---
+            // Concatenate all Huffman codes into a single string of bits.
             StringBuilder bitStream = new StringBuilder();
             for (int i = 0; i < _first20Chars.Count; i++)
                 bitStream.Append(_finalCodes[i]);
             string bits = bitStream.ToString();
 
+            // Calculate how many bits/bytes fit per row for display.
             int bitsPerRow = Math.Max(8, (int)Math.Floor((canvasWidth - (startX + 70)) / bitSpacing));
             int bitRows = (bits.Length + bitsPerRow - 1) / bitsPerRow;
             int byteCount = (bits.Length + 7) / 8;
@@ -81,13 +104,14 @@ Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoi
             if (bytesPerRow < 1) bytesPerRow = 1;
             double rowSpacing = 28;
 
-            // --- Row Y positions ---
+            // --- Compute Y positions for each section of the animation ---
             double binaryRowY = codeY + charRows * 24 + 20;
             double byteGroupsRowY = binaryRowY + rowSpacing * bitRows + 10;
             double hexRowY = byteGroupsRowY + rowSpacing * ((byteCount + bytesPerRow - 1) / bytesPerRow) + 10;
             double hexSummaryY = hexRowY + rowSpacing * ((byteCount + bytesPerRow - 1) / bytesPerRow) + 30;
 
-            // --- Draw Static Labels ---
+            // --- Draw Section Labels ---
+            // These labels help users understand what each row of the animation represents.
             var binaryLabel = new TextBlock
             {
                 Text = "Bitstream:",
@@ -132,20 +156,22 @@ Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoi
             Canvas.SetTop(finalHexLabel, hexSummaryY);
             _canvas.Children.Add(finalHexLabel);
 
-            // --- Animate byte-by-byte, showing cumulative rows for bitstream, byte groups, and hex ---
+            // --- Animate each byte as it's packed ---
+            // For each step, we show more of the bitstream, byte groups, and hex output.
             for (int b = 0; b < byteCount; b++)
             {
-                // Remove only dynamic highlights from previous step
+                // Remove only dynamic highlights from previous step.
+                // This keeps static labels and character displays visible.
                 var toRemove = new List<UIElement>();
                 foreach (UIElement child in _canvas.Children)
                 {
-                    if (child is Rectangle || (child is TextBlock tb && tb.Tag != null && tb.Tag.ToString() == "dynamic"))
+                    if (child is Rectangle || child is TextBlock tb && tb.Tag != null && tb.Tag.ToString() == "dynamic")
                         toRemove.Add(child);
                 }
                 foreach (var el in toRemove)
                     _canvas.Children.Remove(el);
 
-                // --- Bitstream: Show all bits up to the current byte (cumulative), wrapping
+                // --- Bitstream: Show bits up to the current byte, wrapping as needed ---
                 int bitsToShow = Math.Min((b + 1) * 8, bits.Length);
                 for (int i = 0; i < bitsToShow; i++)
                 {
@@ -166,7 +192,7 @@ Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoi
                     _canvas.Children.Add(bitText);
                 }
 
-                // --- Byte Groups: Show all byte rectangles, decimals, and hex up to current byte (cumulative)
+                // --- Byte Groups: Show rectangles and values for each byte up to current step ---
                 for (int j = 0; j <= b; j++)
                 {
                     int start = j * 8;
@@ -219,7 +245,7 @@ Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoi
                     _canvas.Children.Add(hexText);
                 }
 
-                // --- Final Hex Output: Show all bytes up to and including this one (cumulative)
+                // --- Final Hex Output: Show all bytes up to and including this one ---
                 double hexValuesX = startX + 160;
                 int hexPerRow = (int)Math.Floor((canvasWidth - hexValuesX) / 32);
                 if (hexPerRow < 1) hexPerRow = 1;
@@ -247,6 +273,7 @@ Colors.MediumSlateBlue, Colors.DarkKhaki, Colors.Firebrick, Colors.MediumTurquoi
                     _canvas.Children.Add(hexBlock);
                 }
 
+                // Wait before moving to the next animation step, so the user can follow along.
                 await System.Threading.Tasks.Task.Delay(intervalMs);
             }
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CompressionProject;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -7,27 +8,52 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
-namespace CompressionProject
+namespace CompressionProject.GUI.Animation
 {
+    // HuffmanCodeAnimation visually demonstrates how Huffman codes are assigned to characters.
+    // It animates the process of tracing a path from the root of the tree to each character,
+    // showing how each bit in the code corresponds to a left or right move in the tree.
+    // This makes the concept of Huffman coding clear and interactive for users of all experience levels.
     public class HuffmanCodeAnimation
     {
+        // The canvas where all drawing and animation happens.
         private readonly Canvas _canvas;
+
+        // The root node of the Huffman tree.
         private readonly HuffmanNode _root;
+
+        // The (x, y) positions of each node in the tree, used for drawing.
         private readonly Dictionary<HuffmanNode, (double x, double y)> _nodePositions;
+
+        // All nodes in the tree, with their level and step for animation sequencing.
         private readonly List<(HuffmanNode node, int level, int step)> _allNodes;
+
+        // The color palette for each level of the tree, for visual clarity.
         private readonly Color[] RowColors;
+
+        // The first 20 characters from the file, used for step-by-step code assignment.
         private readonly List<char> _first20Chars;
+
+        // The Huffman code table: maps each character to its binary code.
         private readonly Dictionary<char, string> _codeTable;
+
+        // Visual layout parameters for node size and spacing.
         private readonly double radius = 15;
         private readonly double margin = 10;
         private readonly double levelHeight = 40;
 
+        // The leaf nodes (characters) in the tree.
         private readonly List<HuffmanNode> _leaves;
+
+        // Stores the final Huffman codes for the first 20 characters as the animation progresses.
         private readonly string[] _finalCodes;
 
-        // Offset to move the tree further down in the canvas
-        private readonly double treeYOffset = 50; // Increase this value to move the tree down
+        // Moves the tree further down on the canvas to make room for labels and bitstreams.
+        private readonly double treeYOffset = 50;
 
+        /// <summary>
+        /// Sets up the Huffman code animation, preparing all nodes, positions, and code data.
+        /// </summary>
         public HuffmanCodeAnimation(
             Canvas canvas,
             HuffmanNode root,
@@ -40,7 +66,7 @@ namespace CompressionProject
         {
             _canvas = canvas;
             _root = root;
-            _nodePositions = OffsetNodePositions(nodePositions, treeYOffset); // Apply vertical offset
+            _nodePositions = OffsetNodePositions(nodePositions, treeYOffset); // Shift tree down
             _leaves = leaves;
             _allNodes = allNodes;
             RowColors = rowColors;
@@ -50,21 +76,26 @@ namespace CompressionProject
         }
 
         /// <summary>
-        /// Shifts the Y coordinate for all node positions so the tree is drawn further down in the canvas,
-        /// avoiding overlap with the bitstream and character labels.
+        /// Offsets the Y-position of all nodes so the tree doesn't overlap with labels or bitstreams.
         /// </summary>
         private Dictionary<HuffmanNode, (double x, double y)> OffsetNodePositions(Dictionary<HuffmanNode, (double x, double y)> original, double yOffset)
         {
             var shifted = new Dictionary<HuffmanNode, (double x, double y)>();
             foreach (var kvp in original)
-            {
                 shifted[kvp.Key] = (kvp.Value.x, kvp.Value.y + yOffset);
-            }
             return shifted;
         }
 
+        /// <summary>
+        /// Starts the animation that shows how each character's Huffman code is built bit by bit.
+        /// For each character, highlights the path in the tree and the bits as they are assigned.
+        /// </summary>
         public async void StartCodeAnimation(int intervalMs = 300)
         {
+            // Clear any previous codes.
+            Array.Clear(_finalCodes, 0, _finalCodes.Length);
+
+            // For each character, animate the assignment of its code.
             for (int i = 0; i < _first20Chars.Count; i++)
             {
                 char c = _first20Chars[i];
@@ -74,12 +105,13 @@ namespace CompressionProject
                 string code = _codeTable[c];
                 StringBuilder partial = new StringBuilder();
 
+                // Animate each bit in the code, showing the path in the tree.
                 for (int j = 0; j < code.Length; j++)
                 {
                     partial.Append(code[j]);
                     _canvas.Children.Clear();
 
-                    // Prepare codes to display: completed + current partial
+                    // Show codes assigned so far, and the current code in progress.
                     var codeProgress = new Dictionary<int, string>();
                     for (int k = 0; k < _first20Chars.Count; k++)
                         if (!string.IsNullOrEmpty(_finalCodes[k]))
@@ -92,10 +124,10 @@ namespace CompressionProject
                     await System.Threading.Tasks.Task.Delay(100);
                 }
 
-                // Store the final code for this character
+                // Store the full code for this character.
                 _finalCodes[i] = code;
 
-                // After the full code, keep all codes displayed
+                // After the full code is assigned, show all completed codes.
                 _canvas.Children.Clear();
                 var finalCodeProgress = new Dictionary<int, string>();
                 for (int k = 0; k < _first20Chars.Count; k++)
@@ -108,6 +140,11 @@ namespace CompressionProject
             }
         }
 
+        /// <summary>
+        /// Draws the first 20 characters and their assigned codes on the canvas.
+        /// Highlights the character currently being processed.
+        /// Also displays the combined bitstream below the characters.
+        /// </summary>
         public void DrawOriginalCharsAndCodes(Dictionary<int, string> codeProgress = null, int highlightIndex = -1)
         {
             double charSpacing = 40;
@@ -115,6 +152,7 @@ namespace CompressionProject
             double y = 20;
             double codeY = y + 24;
 
+            // Draw each character, highlighting the current one in red.
             for (int i = 0; i < _first20Chars.Count; i++)
             {
                 var text = new TextBlock
@@ -122,21 +160,23 @@ namespace CompressionProject
                     Text = _first20Chars[i].ToString(),
                     FontSize = 14,
                     FontWeight = FontWeights.Bold,
-                    Foreground = (i == highlightIndex) ? Brushes.Red : Brushes.Black
+                    Foreground = i == highlightIndex ? Brushes.Red : Brushes.Black
                 };
                 Canvas.SetLeft(text, startX + i * charSpacing);
                 Canvas.SetTop(text, y);
                 _canvas.Children.Add(text);
             }
 
+            // Combine all codes into a single bitstream string.
             StringBuilder bitStream = new StringBuilder();
             for (int i = 0; i < _first20Chars.Count; i++)
             {
-                string code = (codeProgress != null && codeProgress.ContainsKey(i)) ? codeProgress[i] : "";
+                string code = codeProgress != null && codeProgress.ContainsKey(i) ? codeProgress[i] : "";
                 bitStream.Append(code);
             }
             string bits = bitStream.ToString();
 
+            // Draw the bitstream below the characters, grouping bits for readability.
             double canvasWidth = _canvas.ActualWidth > 0 ? _canvas.ActualWidth : 800;
             double bitSpacing = 10;
             double bitRowY = codeY + 30;
@@ -174,8 +214,13 @@ namespace CompressionProject
             }
         }
 
+        /// <summary>
+        /// Draws the Huffman tree, highlighting the path taken to encode the current character.
+        /// Highlights each node and edge along the path in blue.
+        /// </summary>
         private void DrawTreeWithCodePath(char c, int codeLength)
         {
+            // Find the leaf node for the character.
             HuffmanNode leaf = null;
             foreach (var (node, level, step) in _allNodes)
             {
@@ -188,21 +233,24 @@ namespace CompressionProject
             if (leaf == null)
                 return;
 
+            // Trace the path from the root to the character's leaf node.
             List<(HuffmanNode node, bool isLeft)> path = new List<(HuffmanNode, bool)>();
             HuffmanNode current = leaf;
             while (current != _root)
             {
                 if (current.Parent == null)
                     break;
-                bool isLeft = (current.Parent.Left == current);
+                bool isLeft = current.Parent.Left == current;
                 path.Add((current, isLeft));
                 current = current.Parent;
             }
             path.Reverse();
 
+            // Only show the path up to the current bit being assigned.
             if (codeLength < path.Count)
                 path = path.GetRange(0, codeLength);
 
+            // Draw all edges, highlighting those along the current path.
             foreach (var (node, level, nodeStep) in _allNodes)
             {
                 if (node.Left != null && _nodePositions.ContainsKey(node.Left))
@@ -233,6 +281,7 @@ namespace CompressionProject
                 }
             }
 
+            // Draw all nodes, highlighting those along the current path and always highlighting the root.
             foreach (var (node, level, nodeStep) in _allNodes)
             {
                 var (x, y) = _nodePositions[node];
@@ -240,12 +289,23 @@ namespace CompressionProject
                 foreach (var (pNode, _) in path)
                     if (pNode == node)
                         highlightNode = true;
-                int colorIndex = Math.Min(level, RowColors.Length - 1);
-                Color color = highlightNode ? Colors.DeepSkyBlue : RowColors[colorIndex];
+
+                // The root node is always highlighted in blue.
+                Color color;
+                if (node == _root)
+                {
+                    color = Colors.DeepSkyBlue;
+                }
+                else
+                {
+                    int colorIndex = Math.Min(level, RowColors.Length - 1);
+                    color = highlightNode ? Colors.DeepSkyBlue : RowColors[colorIndex];
+                }
                 DrawNode(node, x, y, radius, color);
             }
         }
 
+        // Draws a line (edge) between two nodes, optionally highlighted and thickened.
         private void DrawEdge(double x1, double y1, double x2, double y2, Brush stroke, double thickness)
         {
             double dx = x2 - x1;
@@ -267,6 +327,7 @@ namespace CompressionProject
             _canvas.Children.Add(line);
         }
 
+        // Draws a node (circle) with its character or frequency label at the specified position.
         private void DrawNode(HuffmanNode node, double x, double y, double radius, Color color)
         {
             var ellipse = new Ellipse
@@ -297,6 +358,9 @@ namespace CompressionProject
             _canvas.Children.Add(text);
         }
 
+        /// <summary>
+        /// Returns the final Huffman codes assigned to the first 20 characters.
+        /// </summary>
         public string[] GetFinalCodes() => _finalCodes;
     }
 }
