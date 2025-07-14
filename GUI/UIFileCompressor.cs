@@ -127,7 +127,7 @@ namespace CompressionProject.GUI
             if (!string.IsNullOrEmpty(InputFileTextBox.Text) && File.Exists(InputFileTextBox.Text))
             {
                 inputFile = InputFileTextBox.Text;
-                compressedFile = Path.Combine(projectFolder, "Compression.bin");
+                compressedFile = Path.Combine(projectFolder, "Compressed.bin");
             }
             else if (File.Exists(Path.Combine(projectFolder, "wap.txt")))
             {
