@@ -1,0 +1,133 @@
+===========================================================
+                   	 USER MANUAL
+===========================================================
+
+Welcome! This guide walks you step by step through using the C# 
+Compression App.
+
+You will learn how to select files, use buttons, view animated
+explanations,and save your compressed or decompressed results
+with confidence.
+
+-------------------------------------------------------
+LOADING A FILE
+-----------------------------------------------------------
+To get started, choose one of these:
+
+1) BROWSE...
+   - Press the "Browse..." button.
+
+   - Select a regular text file (ASCII .txt works best) from
+your computer.
+
+   - The filename will appear in the app after selection.
+
+2) TRY A DEMO
+   - Use the "Small Demo" or "Large Demo" buttons to load a
+built-in example.
+
+   - If you click a demo button, the app will automatically
+begin compression.
+
+
+-----------------------------------------------------------
+COMPRESSING A FILE
+-----------------------------------------------------------
+FOR YOUR OWN FILE:
+
+1. PRESS "COMPRESS"
+   - After selecting a file with "Browse...", click "Compress"
+to begin.
+
+2. WATCH THE ANIMATION AND NARRATION
+   - The app visually shows what happens behind the scenes:
+     * Character frequency table is built.
+     * The Huffman tree appears, growing as nodes combine.
+     * You’ll see binary codes assigned to each character.
+  
+- Narration in the right panel explains every step. 
+
+3. STEP THROUGH EACH PHASE
+   - Press "Next" to advance through animation and narration
+steps.
+   - Use "Previous" to revisit earlier steps.
+
+- IMPORTANT: Wait for each animation to finish before pressing
+"Next" or "Previous" again.
+
+4. WHEN COMPRESSION IS DONE
+   - The app shows a summary of:
+       * Original vs. compressed size
+       * Compression ratio
+       * Location of your compressed file (Compressed.bin)
+   - Use "Next" for more details on output data.
+
+
+-----------------------------------------------------------
+DECOMPRESSING A FILE
+-----------------------------------------------------------
+- After compressing, click "Decompress" at any time.
+  (This also works if you select an existing compressed file.)
+
+- The decompressed result will be saved as Decompressed.txt,
+alongside the compressed file.
+
+- The app will visualize how your original file is restored,
+with narration and animations.
+
+- You can step forward and backward with "Next" and "Previous".
+  (Let each animation finish before clicking again.)
+
+
+-----------------------------------------------------------
+BUTTON GUIDE
+-----------------------------------------------------------
+BUTTON       | FUNCTION
+-----------------------------------------------------------
+BROWSE...    | Select a text file from your computer
+
+SMALL DEMO   | Loads a small example file and compresses it
+
+LARGE DEMO   | Loads a large demo file and compresses it
+
+COMPRESS     | Starts compressing your loaded file
+
+DECOMPRESS   | Restores from Compressed.bin to Decompressed.txt
+
+NEXT         | Advances to the next animation/narration step
+
+PREVIOUS     | Goes back to the previous step
+
+
+-----------------------------------------------------------
+HELPFUL TIPS
+-----------------------------------------------------------
+- FULL SCREEN: If animations are too large, maximize the window
+for a better view.
+
+- FOLLOW ON-SCREEN INSTRUCTIONS: The right panel provides easy-
+to-read guidance.
+
+- DON’T RUSH: Wait for each animation to complete before
+clicking again.
+
+- FILE NAMES: Compressed and decompressed files are
+automatically saved as Compressed.bin and Decompressed.txt in
+the app's folder.
+
+
+-----------------------------------------------------------
+TROUBLESHOOTING
+-----------------------------------------------------------
+- STRANGE CHARACTERS IN PREVIEW: Non-printable (control)
+characters may appear; this is normal for technical data.
+
+- APP SAYS “NOT AN ASCII FILE”: Use a plain .txt file instead of
+a Word document or PDF.
+
+-----------------------------------------------------------
+
+Thank you for using the C# Compression App!
+Enjoy learning and exploring at your own pace.
+
+===========================================================

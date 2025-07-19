@@ -49,6 +49,7 @@ namespace CompressionProject
             CompressSmallButton.Click += CompressSmallButton_Click;
             CompressLargeButton.Click += CompressLargeButton_Click;
             DecompressButton.Click += DecompressButton_Click;
+        
 
             // Connect the step-by-step narration buttons.
             NextStepButton.Click += (s, e) => _narrationSteps?.Next();
@@ -78,6 +79,32 @@ namespace CompressionProject
             // Hide the step-by-step decompression button until needed.
             StepDecompressButton.Visibility = Visibility.Collapsed;
         }
+
+        // Show the manual
+        private void ShowManual_Click(object sender, RoutedEventArgs e)
+        {
+            string manualPath = "UserManual.txt";
+            UserManualListBox.Items.Clear();
+
+            if (File.Exists(manualPath))
+            {
+                foreach (var line in File.ReadAllLines(manualPath))
+                    UserManualListBox.Items.Add(line);
+            }
+            else
+            {
+                UserManualListBox.Items.Add("Manual not found.");
+            }
+
+            ManualPanel.Visibility = Visibility.Visible;
+        }
+
+        private void CloseManual_Click(object sender, RoutedEventArgs e)
+        {
+            ManualPanel.Visibility = Visibility.Collapsed;
+        }
+
+
 
         // Lets the user pick a file from their computer to compress.
         private void BrowseInputButton_Click(object sender, RoutedEventArgs e)
